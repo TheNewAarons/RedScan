@@ -1,0 +1,129 @@
+:root {
+    --bg-primary: #000000;
+    --bg-secondary: #000000;
+    --bg-card: #0a0a0a;
+    --bg-card-hover: #141414;
+    --border-color: #333333;
+    --text-primary: #ffffff;
+    --text-secondary: #888888;
+    --accent-color: #ffffff;
+}
+
+.stApp {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Courier New', Courier, monospace;
+}
+
+section[data-testid="stSidebar"] {
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--text-primary) !important;
+    font-weight: 400 !important;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+}
+
+.stButton>button {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+    transition: all 0.1s ease;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+.stButton>button:hover {
+    background-color: var(--text-primary);
+    color: var(--bg-primary);
+    border-color: var(--text-primary);
+}
+
+.stButton>button[kind="primary"] {
+    background-color: var(--text-primary);
+    color: var(--bg-primary);
+    border: 1px solid var(--text-primary);
+}
+
+.stButton>button[kind="primary"]:hover {
+    background-color: #cccccc;
+    border-color: #cccccc;
+    color: #000;
+}
+
+.stTextInput>div>div>input,
+.stSelectbox>div>div>div {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+    font-family: 'Courier New', monospace;
+}
+
+div[data-testid="stDataFrame"] {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+}
+
+div[data-testid="stMetric"] {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: 0px;
+}
+
+div[data-testid="stMetricLabel"] {
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+div[data-testid="stMetricValue"] {
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    gap: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: auto;
+    white-space: pre-wrap;
+    background-color: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 8px 0px;
+    border-radius: 0px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: transparent;
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom: 2px solid var(--text-primary);
+}
+
+.stAlert {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 0px;
+}
