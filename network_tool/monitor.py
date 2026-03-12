@@ -25,15 +25,19 @@ class PacketSniffer:
     def stop(self):
         self.stop_sniffing = True
         if self.thread and self.thread.is_alive():
+            # Scapy's sniff can sometimes be slow to stop
             pass
 
     def _sniff(self, interface, target_ip):
         def stop_check(x):
             return self.stop_sniffing
 
-        # Capture everything, filter in UI (Wireshark style)
+        bpf_filter = f"host {target_ip}" if target_ip else None
+
+        # Use filter if target_ip is provided to reduce overhead
         scapy.sniff(
             iface=interface,
+            filter=bpf_filter,
             store=False,
             prn=self._process_packet,
             stop_filter=stop_check
@@ -46,11 +50,14 @@ class PacketSniffer:
         print(".", end="", flush=True) 
         
         timestamp = time.strftime("%H:%M:%S")
+        info = ""
+        proto = "Other"
         
         if packet.haslayer(HTTPRequest):
             try:
-                url = packet[HTTPRequest].Host.decode() + packet[HTTPRequest].Path.decode()
-                method = packet[HTTPRequest].Method.decode()
+                url = (packet[HTTPRequest].Host.decode(errors='ignore') if packet[HTTPRequest].Host else "") + \
+                      (packet[HTTPRequest].Path.decode(errors='ignore') if packet[HTTPRequest].Path else "")
+                method = packet[HTTPRequest].Method.decode(errors='ignore')
                 info = f"HTTP {method} {url}"
                 proto = "HTTP"
             except:
@@ -59,7 +66,7 @@ class PacketSniffer:
 
         elif packet.haslayer(DNSQR):
             try:
-                query = packet[DNSQR].qname.decode()
+                query = packet[DNSQR].qname.decode(errors='ignore')
                 info = f"DNS Query: {query}"
                 proto = "DNS"
             except:
@@ -81,13 +88,12 @@ class PacketSniffer:
         else:
             # Capture other protocols (ICMP, ARP, etc)
             if packet.haslayer(scapy.IP):
-                proto = packet[scapy.IP].proto
+                p_num = packet[scapy.IP].proto
                 # Map common protocol numbers
-                if proto == 1: proto = "ICMP"
-                elif proto == 6: proto = "TCP"
-                elif proto == 17: proto = "UDP"
-                else: proto = f"IP/{proto}"
-                
+                if p_num == 1: proto = "ICMP"
+                elif p_num == 6: proto = "TCP"
+                elif p_num == 17: proto = "UDP"
+                else: proto = f"IP/{p_num}"
                 info = packet.summary()
             elif packet.haslayer(scapy.ARP):
                 proto = "ARP"
@@ -99,10 +105,19 @@ class PacketSniffer:
                 proto = "Other"
                 info = packet.summary()
 
+        src_ip = "-"
+        dst_ip = "-"
+        if packet.haslayer(scapy.IP):
+            src_ip = packet[scapy.IP].src
+            dst_ip = packet[scapy.IP].dst
+        elif packet.haslayer(scapy.IPv6):
+            src_ip = packet[scapy.IPv6].src
+            dst_ip = packet[scapy.IPv6].dst
+        elif packet.haslayer(scapy.ARP):
+            src_ip = packet[scapy.ARP].psrc
+            dst_ip = packet[scapy.ARP].pdst
+
         with self.lock:
-            src_ip = packet[scapy.IP].src if packet.haslayer(scapy.IP) else (packet[scapy.ARP].psrc if packet.haslayer(scapy.ARP) else "-")
-            dst_ip = packet[scapy.IP].dst if packet.haslayer(scapy.IP) else (packet[scapy.ARP].pdst if packet.haslayer(scapy.ARP) else "-")
-            
             self.packet_data.append({
                 "Time": timestamp,
                 "Source": src_ip,

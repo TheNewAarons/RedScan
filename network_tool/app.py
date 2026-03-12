@@ -10,18 +10,17 @@ if os.name == 'posix':
     if os.geteuid() != 0:
         st.warning("⚠️ This application requires Root/Administrator privileges for network scanning and sniffing. Please run with `sudo`.")
 
+# Add current directory to path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 try:
     import scanner
     import monitor
     import manager
     import net_utils as utils
-except ImportError:
-    # Handle cases where running from different directories
-    try:
-        from network_tool import scanner, monitor, manager, net_utils as utils
-    except ImportError as e:
-        st.error(f"Critical Error: Failed to import network modules. {e}")
-        st.stop()
+except ImportError as e:
+    st.error(f"Critical Error: Failed to import network modules. {e}")
+    st.stop()
 
 st.set_page_config(page_title="Network Monitor", layout="wide")
 
@@ -40,7 +39,7 @@ except FileNotFoundError:
 if 'devices' not in st.session_state:
     st.session_state.devices = pd.DataFrame(columns=["IP", "MAC", "Hostname", "Vendor"])
 if 'monitor_data' not in st.session_state:
-    st.session_state.monitor_data = pd.DataFrame(columns=["Time", "Source", "Protocol", "Info"])
+    st.session_state.monitor_data = pd.DataFrame(columns=["Time", "Source", "Destination", "Protocol", "Info"])
 if 'monitoring_target' not in st.session_state:
     st.session_state.monitoring_target = None
 if 'blocking_target' not in st.session_state:
@@ -132,47 +131,47 @@ with tab2:
     placeholder = st.empty()
     
     if st.session_state.monitoring_target is not None:
-        
         # Minimal interface - Wireshark style
         data_placeholder = st.empty()
         
-        while st.session_state.monitoring_target is not None:
-            new_data = st.session_state.sniffer.get_data()
-            st.session_state.monitor_data = new_data
-            
-            # Filter data for display if a specific target is selected
-            if target_ip and target_ip != "All":
-                # Robust filtering on Source OR Destination
-                display_df = new_data[
-                    (new_data['Source'] == target_ip) | 
-                    (new_data['Destination'] == target_ip)
-                ]
-            else:
-                display_df = new_data
+        new_data = st.session_state.sniffer.get_data()
+        st.session_state.monitor_data = new_data
 
-            with data_placeholder.container():
-                # Debug info
-                st.markdown(f"**Captured:** {len(new_data)} | **Showing:** {len(display_df)}")
-                
-                if not display_df.empty:
-                    # Show latest packets at the top
-                    display_df = display_df.iloc[::-1]
-                    st.dataframe(
-                        display_df, 
-                        use_container_width=True,
-                        height=500,
-                        column_config={
-                            "Time": st.column_config.TextColumn("Time", width="small"),
-                            "Source": st.column_config.TextColumn("Source", width="medium"),
-                            "Destination": st.column_config.TextColumn("Destination", width="medium"),
-                            "Protocol": st.column_config.TextColumn("Protocol", width="small"),
-                            "Info": st.column_config.TextColumn("Info", width="large"),
-                        }
-                    )
-                else:
-                    st.info("No packets captured yet. Waiting for traffic...")
+        # Filter data for display if a specific target is selected
+        if target_ip and target_ip != "All":
+            # Robust filtering on Source OR Destination
+            display_df = new_data[
+                (new_data['Source'] == target_ip) |
+                (new_data['Destination'] == target_ip)
+            ]
+        else:
+            display_df = new_data
+
+        with data_placeholder.container():
+            # Debug info
+            st.markdown(f"**Captured:** {len(new_data)} | **Showing:** {len(display_df)}")
             
-            time.sleep(0.5) # Relaxed refresh rate for stability
+            if not display_df.empty:
+                # Show latest packets at the top
+                display_df = display_df.iloc[::-1]
+                st.dataframe(
+                    display_df,
+                    use_container_width=True,
+                    height=500,
+                    column_config={
+                        "Time": st.column_config.TextColumn("Time", width="small"),
+                        "Source": st.column_config.TextColumn("Source", width="medium"),
+                        "Destination": st.column_config.TextColumn("Destination", width="medium"),
+                        "Protocol": st.column_config.TextColumn("Protocol", width="small"),
+                        "Info": st.column_config.TextColumn("Info", width="large"),
+                    }
+                )
+            else:
+                st.info("No packets captured yet. Waiting for traffic...")
+
+        # Automatic refresh without a blocking while loop
+        time.sleep(1)
+        st.rerun()
 
 with tab3:
     st.header("Access Management")

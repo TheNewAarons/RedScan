@@ -52,27 +52,56 @@ def get_interface_ip(interface):
     return "127.0.0.1"
 
 def get_local_subnet(interface):
+    try:
+        addrs = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addrs:
+            addr_info = addrs[netifaces.AF_INET][0]
+            ip = addr_info['addr']
+            netmask = addr_info['netmask']
+
+            # Calculate CIDR prefix length
+            cidr = sum(bin(int(x)).count('1') for x in netmask.split('.'))
+
+            # Get network address
+            ip_parts = [int(x) for x in ip.split('.')]
+            mask_parts = [int(x) for x in netmask.split('.')]
+            net_parts = [str(ip_parts[i] & mask_parts[i]) for i in range(4)]
+
+            return f"{'.'.join(net_parts)}/{cidr}"
+    except Exception as e:
+        print(f"Error calculating subnet: {e}")
+
+    # Fallback
     ip = get_interface_ip(interface)
     if ip == "127.0.0.1":
-        return "192.168.1.1/24"
-    
+        return "192.168.1.0/24"
     parts = ip.split('.')
     return f"{parts[0]}.{parts[1]}.{parts[2]}.0/24"
 
 def get_gateway_ip(interface):
     """
-    Attempts to guess the gateway IP. 
-    Conventionally x.x.x.1, but this is a heuristic.
+    Attempts to identify the gateway IP.
     """
     try:
         gws = netifaces.gateways()
+        # Check for default gateway on the specific interface
         if 'default' in gws and netifaces.AF_INET in gws['default']:
-            return gws['default'][netifaces.AF_INET][0]
-    except:
-        pass
+            gw_ip, gw_iface = gws['default'][netifaces.AF_INET]
+            if gw_iface == interface:
+                return gw_ip
+
+        # Check all gateways for this interface
+        if netifaces.AF_INET in gws:
+            for gw in gws[netifaces.AF_INET]:
+                if gw[1] == interface:
+                    return gw[0]
+    except Exception as e:
+        print(f"Error detecting gateway: {e}")
         
     # Fallback to heuristic
     ip = get_interface_ip(interface)
+    if ip == "127.0.0.1":
+        return "192.168.1.1"
     parts = ip.split('.')
     return f"{parts[0]}.{parts[1]}.{parts[2]}.1"
 
