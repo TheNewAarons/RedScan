@@ -36,14 +36,14 @@ class NetworkManager:
             return False
 
     def restore(self, destination_ip, source_ip, interface=None):
-        destination_mac = self.get_mac(destination_ip, interface)
-        source_mac = self.get_mac(source_ip, interface)
-        if destination_mac and source_mac:
-            packet = scapy.Ether(dst=destination_mac) / scapy.ARP(op=2, pdst=destination_ip, hwdst=destination_mac, psrc=source_ip, hwsrc=source_mac)
-            try:
+        try:
+            destination_mac = self.get_mac(destination_ip, interface)
+            source_mac = self.get_mac(source_ip, interface)
+            if destination_mac and source_mac:
+                packet = scapy.Ether(dst=destination_mac) / scapy.ARP(op=2, pdst=destination_ip, hwdst=destination_mac, psrc=source_ip, hwsrc=source_mac)
                 scapy.sendp(packet, count=4, verbose=False, iface=interface)
-            except:
-                pass
+        except Exception as e:
+             print(f"Restore failed for {destination_ip}: {e}")
 
     def start_blocking(self, target_ip, gateway_ip, interface=None):
         self.stop_mitigation = False

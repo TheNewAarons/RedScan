@@ -5,15 +5,19 @@ import threading
 import time
 import pandas as pd
 
+import collections
+
 class PacketSniffer:
     def __init__(self):
         self.stop_sniffing = False
-        self.packet_data = []
+        self.packet_data = collections.deque(maxlen=1000)
         self.thread = None
+        self.lock = threading.Lock()
 
     def start(self, interface, target_ip=None):
         self.stop_sniffing = False
-        self.packet_data = [] 
+        with self.lock:
+            self.packet_data.clear() 
         self.thread = threading.Thread(target=self._sniff, args=(interface, target_ip))
         self.thread.daemon = True
         self.thread.start()
@@ -27,15 +31,11 @@ class PacketSniffer:
         def stop_check(x):
             return self.stop_sniffing
 
-        filter_str = ""
-        if target_ip:
-            filter_str = f"host {target_ip}"
-        
+        # Capture everything, filter in UI (Wireshark style)
         scapy.sniff(
             iface=interface,
             store=False,
             prn=self._process_packet,
-            filter=filter_str,
             stop_filter=stop_check
         )
 
@@ -79,14 +79,43 @@ class PacketSniffer:
             proto = "UDP"
             
         else:
-            return
+            # Capture other protocols (ICMP, ARP, etc)
+            if packet.haslayer(scapy.IP):
+                proto = packet[scapy.IP].proto
+                # Map common protocol numbers
+                if proto == 1: proto = "ICMP"
+                elif proto == 6: proto = "TCP"
+                elif proto == 17: proto = "UDP"
+                else: proto = f"IP/{proto}"
+                
+                info = packet.summary()
+            elif packet.haslayer(scapy.ARP):
+                proto = "ARP"
+                info = f"ARP {packet[scapy.ARP].op} {packet[scapy.ARP].psrc} -> {packet[scapy.ARP].pdst}"
+            elif packet.haslayer(scapy.IPv6):
+                proto = "IPv6"
+                info = packet.summary()
+            else:
+                proto = "Other"
+                info = packet.summary()
 
-        self.packet_data.append({
-            "Time": timestamp,
-            "Source": packet[scapy.IP].src if packet.haslayer(scapy.IP) else "Unknown",
-            "Protocol": proto,
-            "Info": info
-        })
+        with self.lock:
+            src_ip = packet[scapy.IP].src if packet.haslayer(scapy.IP) else (packet[scapy.ARP].psrc if packet.haslayer(scapy.ARP) else "-")
+            dst_ip = packet[scapy.IP].dst if packet.haslayer(scapy.IP) else (packet[scapy.ARP].pdst if packet.haslayer(scapy.ARP) else "-")
+            
+            self.packet_data.append({
+                "Time": timestamp,
+                "Source": src_ip,
+                "Destination": dst_ip,
+                "Protocol": proto,
+                "Info": info
+            })
 
     def get_data(self):
-        return pd.DataFrame(self.packet_data)
+        with self.lock:
+            data = list(self.packet_data)
+        
+        if not data:
+            return pd.DataFrame(columns=["Time", "Source", "Destination", "Protocol", "Info"])
+            
+        return pd.DataFrame(data)

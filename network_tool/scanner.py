@@ -43,7 +43,15 @@ def scan_network_details(devices_df):
     if devices_df.empty:
         return devices_df
 
-    nm = nmap.PortScanner()
+    try:
+        nm = nmap.PortScanner()
+    except nmap.PortScannerError:
+        print("Nmap not found", flush=True)
+        return devices_df
+    except Exception as e:
+        print(f"Nmap error: {e}", flush=True)
+        return devices_df
+
     updated_devices = []
     
     print("Starting Deep Scan (Nmap)...")
