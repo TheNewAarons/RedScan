@@ -6,8 +6,12 @@ class NetworkManager:
     def __init__(self):
         self.stop_mitigation = False
         self.thread = None
+        self.mac_cache = {}
 
     def get_mac(self, ip, interface=None):
+        if ip in self.mac_cache:
+            return self.mac_cache[ip]
+
         arp_request = scapy.ARP(pdst=ip)
         broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
         arp_request_broadcast = broadcast/arp_request
@@ -18,7 +22,9 @@ class NetworkManager:
             answered_list = scapy.srp(arp_request_broadcast, timeout=2, verbose=False)[0]
         
         if answered_list:
-            return answered_list[0][1].hwsrc
+            mac = answered_list[0][1].hwsrc
+            self.mac_cache[ip] = mac
+            return mac
         return None
 
     def spoof(self, target_ip, spoof_ip, interface=None):
