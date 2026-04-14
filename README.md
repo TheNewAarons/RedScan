@@ -16,7 +16,7 @@ El proyecto utiliza las siguientes librerías de Python para su funcionamiento:
 
 1.  **Clonar el repositorio**:
     ```bash
-    git clone https://github.com/tu-usuario/vista-de-red.git
+    git clone https://github.com/your-username/vista-de-red.git
     cd vista-de-red
     ```
 
